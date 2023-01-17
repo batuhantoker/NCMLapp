@@ -279,13 +279,16 @@ class App(customtkinter.CTk):
         self.third_frame.label_1.grid(pady=10, padx=10)
         # create fourth frame
         self.fourth_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.fourth_frame.grid_columnconfigure(1, weight=1)
+        self.fourth_frame.grid_columnconfigure(0, weight=1)
+
+
+
         # create fifth frame
         self.fifth_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.fifth_frame.grid_columnconfigure(1, weight=1)
+        self.fifth_frame.grid_columnconfigure(0, weight=1)
         # create fifth frame
         self.sixth_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
-        self.sixth_frame.grid_columnconfigure(1, weight=1)
+        self.sixth_frame.grid_columnconfigure(0, weight=1)
         # select default frame
         self.select_frame_by_name("home")
 
@@ -459,6 +462,7 @@ def on_train_sklearn():
     y = target
     print(X.shape,y.shape)
     def train_models():
+        print(k_fold.get())
         global X_train, X_test, y_train, y_test, trained_models
         trained_models=[]
 
@@ -485,8 +489,6 @@ def on_train_sklearn():
 
 
 
-
-
     # Create input for train/test split ratio
     split_ratio_var = tk.DoubleVar(value=0.8)
     split_ratio_entry = tk.Entry(on_train_window, textvariable=split_ratio_var)
@@ -499,6 +501,12 @@ def on_train_sklearn():
     # Create test button
     test_button = tk.Button(on_train_window, text="Test", command=test_models)
     test_button.grid()
+
+    k_fold = tk.DoubleVar(value=2)
+    frame.entry_1 = customtkinter.CTkEntry(master=frame, textvariable=k_fold, placeholder_text="k_fold number, min 2")
+    frame.checkbox_1 = customtkinter.CTkCheckBox(master=frame, text='Employ cross-validation, as integer, minimum 2',
+                                                             command=frame.entry_1.grid)
+    frame.checkbox_1.grid()
 
     #on_train_window.mainloop()
 
