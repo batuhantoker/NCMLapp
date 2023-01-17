@@ -236,6 +236,8 @@ class App(customtkinter.CTk):
 
 
 
+
+
         # create second frame
         self.second_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.second_frame.grid_columnconfigure(0, weight=1)
@@ -344,6 +346,7 @@ class App(customtkinter.CTk):
     def home_button_event(self):
         self.select_frame_by_name("home")
 
+
     def frame_2_button_event(self):
         self.select_frame_by_name("frame_2")
 
@@ -383,9 +386,6 @@ def sklearn_func(frame):
             print(parameters)
             label1 = tk.Label(frame, text=f"Parameters for {model_name}")
             label1.grid(row=0, column=a)
-            set_params_button = customtkinter.CTkButton(frame, text="Set parameters",
-                                                 command=lambda: [set_parameters()])
-            set_params_button.grid(row=1, column=a)
 
             b=2
             for key, value in parameters.items():
@@ -397,6 +397,9 @@ def sklearn_func(frame):
                 globals()[f"entry{key}"].grid(row=b+1,column=a)
                 b=b+2
             a = a + 1
+        set_params_button = customtkinter.CTkButton(frame, text="Set parameters",
+                                                    command=lambda: [set_parameters()])
+        set_params_button.grid(row=len(model_list)+3, column=0)
     def set_parameters():
         for model_name,model_func in models_list:
             parameters = model_func.get_params()
@@ -453,7 +456,18 @@ def sklearn_func(frame):
         cb.grid(row=a,column=0)
         a=a+1
     set_button = customtkinter.CTkButton(frame, text="Get models", command=lambda: [on_train_sklearn(),get_parameters()])
-    set_button.grid(row=0,column=0)
+    set_button.grid(row=len(model_list)+1,column=0)
+count_test = 0
+count_train = 0
+def train_clicked(): # without event because I use `command=` instead of `bind`
+    global count_train
+
+    count_train = count_train + 1
+
+def test_clicked(): # without event because I use `command=` instead of `bind`
+    global count_test
+
+    count_test = count_test + 1
 def on_train_sklearn():
     global models_param, models_list, target, features
     frame = app.fifth_frame
@@ -463,7 +477,7 @@ def on_train_sklearn():
     print(X.shape,y.shape)
     def train_models():
         print(k_fold.get())
-        global X_train, X_test, y_train, y_test, trained_models
+        global X_train, X_test, y_train, y_test, trained_models,count_train,count_test
         trained_models=[]
 
         for a,model in enumerate(models_list):
@@ -474,18 +488,21 @@ def on_train_sklearn():
             end_time = time.time()
 
             execution_time = round(end_time - start_time, 5)
-            frame.train_label = tk.Label(on_train_window, text=f"{model[0]} is successfully trained in {execution_time} seconds.")
-            frame.train_label.grid(row=a,column=1)
-            print(f"{model[0]} is successfully trained in {execution_time} seconds.")
+            # frame.train_label = tk.Label(frame.canvas, text=f"{model[0]} is successfully trained in {execution_time} seconds.")
+            # frame.train_label.grid(row=count_train + a,column=1)
+            frame.canvas.insert(tk.END,f"{model[0]} is successfully trained in {execution_time} seconds.")
 
+            print(f"{model[0]} is successfully trained in {execution_time} seconds.")
+        count_train = count_train + a
     def test_models():
         global X_train, X_test, y_train, y_test, trained_models
         for index,model in enumerate(trained_models):
             accuracy = model.score(X_test, y_test)
             print(f"{models_list[index][0]} has an accuracy of {accuracy}.")
-            frame.test_label = tk.Label(on_train_window,
-                                   text=f"{models_list[index][0]} has an accuracy of {accuracy}.")
-            frame.test_label.grid(row=index,column=2)
+            # frame.test_label = tk.Label(frame.canvas,
+            #                        text=f"{models_list[index][0]} has an accuracy of {accuracy}.")
+            # frame.test_label.grid(row=index,column=2,sticky="e")
+            frame.canvas2.insert(tk.END, f"{models_list[index][0]} has an accuracy of {accuracy}.")
 
 
 
@@ -495,11 +512,11 @@ def on_train_sklearn():
     split_ratio_entry.grid()
 
     # Create train button
-    train_button = tk.Button(on_train_window, text="Train", command=train_models)
+    train_button = tk.Button(on_train_window, text="Train", command=lambda :[train_models(),train_clicked()])
     train_button.grid()
 
     # Create test button
-    test_button = tk.Button(on_train_window, text="Test", command=test_models)
+    test_button = tk.Button(on_train_window, text="Test", command=lambda :[test_models(),test_clicked()])
     test_button.grid()
 
     k_fold = tk.DoubleVar(value=2)
@@ -507,6 +524,26 @@ def on_train_sklearn():
     frame.checkbox_1 = customtkinter.CTkCheckBox(master=frame, text='Employ cross-validation, as integer, minimum 2',
                                                              command=frame.entry_1.grid)
     frame.checkbox_1.grid()
+
+    tk.Label(frame,text="Training").grid(row=4, column=0)
+    # Add a canvas in that frame
+    frame.canvas = tk.Listbox(frame)
+    frame.canvas.grid(row=5, column=0, sticky="news")
+
+    # Link a scrollbar to the canvas
+    vsb = tk.Scrollbar(frame, orient="vertical", command=frame.canvas.yview)
+    vsb.grid(row=5, column=1, sticky='ns')
+    frame.canvas.configure(yscrollcommand=vsb.set)
+    tk.Label(frame,text="Test").grid(row=6, column=0)
+    # Add a canvas in that frame
+    frame.canvas2 = tk.Listbox(frame)
+    frame.canvas2.grid(row=7, column=0, sticky="news")
+
+    # Link a scrollbar to the canvas
+    vsb2 = tk.Scrollbar(frame, orient="vertical", command=frame.canvas2.yview)
+    vsb2.grid(row=7, column=1, sticky='ns')
+    frame.canvas2.configure(yscrollcommand=vsb2.set)
+
 
     #on_train_window.mainloop()
 
