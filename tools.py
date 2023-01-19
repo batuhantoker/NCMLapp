@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 from tkinter import PhotoImage, filedialog
 from sklearn import datasets
 import pandas as pd
+from sklearn.metrics import accuracy_score, f1_score
 import time
 from sklearn.linear_model import *
 from sklearn.model_selection import train_test_split
@@ -193,6 +194,7 @@ class App(customtkinter.CTk):
                                                                 command=self.change_appearance_mode_event)
         self.appearance_mode_menu.grid(row=7, column=0, padx=20, pady=20, sticky="s")
 
+
         # create home frame
         self.home_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.home_frame.grid_columnconfigure(0, weight=1)
@@ -291,6 +293,11 @@ class App(customtkinter.CTk):
         # create fifth frame
         self.sixth_frame = customtkinter.CTkFrame(self, corner_radius=0, fg_color="transparent")
         self.sixth_frame.grid_columnconfigure(0, weight=1)
+        self.sixth_frame.text_var = tk.StringVar()
+        self.sixth_frame.text_var.set('Please select data to proceed')
+        self.sixth_frame.intro = tk.Label(self.sixth_frame, textvariable=self.sixth_frame.text_var)
+        self.sixth_frame.intro.grid()
+
         # select default frame
         self.select_frame_by_name("home")
 
@@ -418,7 +425,7 @@ def sklearn_func(frame):
             print(params)
             model_func.set_params(**params)
     def on_select(var_list,model_list):
-        global models_list
+        global models_list, selection
         selection = [model_list[i] for i in range(len(var_list)) if var_list[i].get()]
         models_list = []
         for model_name in selection:
@@ -455,7 +462,7 @@ def sklearn_func(frame):
         cb = customtkinter.CTkCheckBox(frame, text=element, variable=var, command=lambda: on_select(var_list,model_list))
         cb.grid(row=a,column=0)
         a=a+1
-    set_button = customtkinter.CTkButton(frame, text="Get models", command=lambda: [on_train_sklearn(),get_parameters()])
+    set_button = customtkinter.CTkButton(frame, text="Get models", command=lambda: [on_train_sklearn(),get_parameters(),find_best_window()])
     set_button.grid(row=len(model_list)+1,column=0)
 count_test = 0
 count_train = 0
@@ -481,7 +488,7 @@ def on_train_sklearn():
         trained_models=[]
 
         for a,model in enumerate(models_list):
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(1 - split_ratio_var.get()))
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(1 - app.split_ratio_var.get()))
             start_time = time.time()
             print(model[1])
             trained_models.append(model[1].fit(X_train, y_train))
@@ -507,8 +514,8 @@ def on_train_sklearn():
 
 
     # Create input for train/test split ratio
-    split_ratio_var = tk.DoubleVar(value=0.8)
-    split_ratio_entry = tk.Entry(on_train_window, textvariable=split_ratio_var)
+    app.split_ratio_var = tk.DoubleVar(value=0.8)
+    split_ratio_entry = tk.Entry(on_train_window, textvariable=app.split_ratio_var)
     split_ratio_entry.grid()
 
     # Create train button
@@ -585,6 +592,87 @@ def menubar(app):
     menubar.add_cascade(label="Help", menu=helpmenu)
     app.config(menu=menubar)
 
+def find_best_window():
+    global feature_names, selection
+    app.sixth_frame.text_var.set(f'Data and models are selected.\n\n Selected model(s): {selection} \n\n Selected feature(s): {feature_names} \n\n Please select what you want to tune')
+    app.sixth_frame.find_best_frame = tk.LabelFrame(app.sixth_frame, text="Find Best")
+    app.sixth_frame.find_best_frame.grid()  # (row=0, column=4, columnspan=2)
+    app.sixth_frame.find_best_var = tk.StringVar(value="features")
+    tk.Radiobutton(app.sixth_frame.find_best_frame, text="Features", variable=app.sixth_frame.find_best_var,
+                   value="features").grid()
+    tk.Radiobutton(app.sixth_frame.find_best_frame, text="Model", variable=app.sixth_frame.find_best_var,
+                   value="model").grid()
+    tk.Radiobutton(app.sixth_frame.find_best_frame, text="Features and Model", variable=app.sixth_frame.find_best_var,
+                   value="features and model").grid()
+    app.sixth_frame.find_best_button = customtkinter.CTkButton(app.sixth_frame, text="Find best combination",
+                            command=lambda: [find_best()])
+    app.sixth_frame.find_best_button.grid()
+
+def find_best():
+    print(app.sixth_frame.find_best_var.get())
+    app.sixth_frame.find_best_button.grid_forget()
+    app.progress_bar = customtkinter.CTkProgressBar(app.sixth_frame,mode='determinate', orientation='horizontal')
+    app.progress_bar.set(0)
+    app.progress_bar.grid(pady=40)
+    app.sixth_frame.find_best_button.configure(state="disable")
+    if app.sixth_frame.find_best_var.get() == 'model':
+        find_best_model()
+    if app.sixth_frame.find_best_var.get() == 'features':
+        find_best_features()
+    if app.sixth_frame.find_best_var.get() == "features and model":
+        find_best_all()
+
+def find_best_model():
+    global models_list, target, label, data, features,data_selection,feature_names
+
+    length_of_process = len(feature_names)
+    X = features
+    y = target
+
+    def train_test_models():
+        global X_train, X_test, y_train, y_test, trained_models, count_train, count_test, best_model
+        trained_models = []
+        best_accuracy = 0
+        best_model = []
+        for a, model in enumerate(models_list):
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=(1 - app.split_ratio_var.get()))
+            app.progress_bar.set(a*1/length_of_process)
+            start_time = time.time()
+            trained_models.append(model[1].fit(X_train, y_train))
+            end_time = time.time()
+            execution_time = round(end_time - start_time, 5)
+            #frame.canvas.insert(tk.END, f"{model[0]} is successfully trained in {execution_time} seconds.")
+            print(f"{model[0]} is successfully trained in {execution_time} seconds.")
+            y_pred = model[1].predict(X_test)
+            accuracy = accuracy_score(y_test, y_pred)
+            print(f"{model[0]} has an accuracy of {accuracy}.")
+            if accuracy >= best_accuracy:
+                best_model.append([model[0], accuracy])
+                print('New good performance!')
+                # Print the performance of the model
+                print('Model: {}'.format(model[0]))
+                print('Accuracy: {}'.format(accuracy))
+                if accuracy > best_accuracy:
+                    best_accuracy = accuracy
+                    best_model_name = model[0]
+                    print(f'New best performance! :{best_model_name}')
+        count_train = count_train + a
+    train_test_models()
+    print_best()
+
+def find_best_features():
+    pass
+def find_best_all():
+    pass
+
+def print_best():
+    global best_model
+    app.print_best_text = tk.Label(app.sixth_frame,
+                           text=f"Best performance is achieved with \n {best_model}")
+
+    app.print_best_text.grid()
+    app.progress_bar.grid_forget()
+    app.sixth_frame.find_best_button.grid()
 if __name__ == "__main__":
     global app, data_selection
     data_selection=0
