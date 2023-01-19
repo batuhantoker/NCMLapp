@@ -23,104 +23,6 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 
 import sys
 
-def str_to_class(classname):
-    return getattr(sys.modules[__name__], classname)
-def data_from_local(display_window):
-    global data
-    filepath = filedialog.askopenfilename(filetypes=[("CSV Files","*.csv"),("MAT Files","*.mat"),("TXT Files","*.txt")])
-    file_ext = filepath.split(".")[-1]
-    if file_ext == "csv":
-        data = pd.read_csv(filepath)
-        data = pd.DataFrame(data)
-    elif file_ext == "mat":
-        data = scipy.io.loadmat(filepath)
-        data = pd.DataFrame(data)
-    elif file_ext == "txt":
-        data = pd.read_csv(filepath, delimiter = '\t')
-        data = pd.DataFrame(data)
-
-    def store_selections(target_var, feature_vars):
-        global data, target, features, data_selection, feature_names
-
-        target = (data[target_var.get()])  # data.columns[str( )]
-        features = pd.DataFrame()
-        data_selection = 1
-        for i in feature_vars:
-            print({data.columns[i]: (data[data.columns[i]])})
-            features[data.columns[i]] = np.asarray(data[data.columns[
-                i]])  # features.append(features_temp, ignore_index=True) #features[] = data[data.columns[i]]
-        print(features)
-        feature_names = [data.columns[i] for i in feature_vars]
-        target_text = tk.Label(display_window,
-                               text=f"Data is selected. You can return this page to change selected features.\n Selected feature(s): {feature_names}"
-                               )
-        target_text.grid()
-
-    display_window.target_var = tk.StringVar(value='target')
-    display_window.feature_vars = tk.StringVar()
-    display_window.target_label = tk.Label(display_window, text="Select Target Column")
-    display_window.target_label.grid()
-    display_window.target_select = customtkinter.CTkOptionMenu(display_window, variable=display_window.target_var,
-                                                               values=list(data.columns))
-    display_window.target_select.grid()
-    display_window.feature_label = tk.Label(display_window, text="Select Feature Columns")
-    display_window.feature_label.grid()
-    display_window.feature_select = tk.Listbox(display_window, selectmode='multiple',
-                                               listvariable=display_window.feature_vars)
-    for col in data.columns:
-        display_window.feature_select.insert(tk.END, col)
-    display_window.feature_select.grid()
-
-    display_window.data_label = tk.Label(display_window, text=data.head().to_string())
-    display_window.data_label.grid()
-    display_window.submit_data = customtkinter.CTkButton(display_window, text="Submit data",
-                                                         command=lambda: store_selections(display_window.target_var,
-                                                                                          display_window.feature_select.curselection()))
-    display_window.submit_data.grid()
-
-def import_data2():
-    global data,data_selection
-    dataset_name = dataset_var.get()
-    data = getattr(datasets,dataset)()
-
-    #display_data2()
-
-def display_data2(display_window):
-    global data, target, features,dataset_var,data_selection
-    data = pd.DataFrame(data=np.c_[data['data'], data['target']],columns=data['feature_names'] + ['target'])
-    data = data.dropna()
-
-    def store_selections(target_var, feature_vars):
-        global data, target, features,data_selection,feature_names
-
-        target = (data[target_var.get()])#data.columns[str( )]
-        features = pd.DataFrame()
-        data_selection = 1
-        for i in feature_vars:
-            print({data.columns[i]: (data[data.columns[i]])})
-            features[data.columns[i]] = np.asarray(data[data.columns[i]])# features.append(features_temp, ignore_index=True) #features[] = data[data.columns[i]]
-        print(features)
-        feature_names = [data.columns[i] for i in feature_vars]
-        target_text = tk.Label(display_window, text=f"Data is selected. You can return this page to change selected features.\n Selected feature(s): {feature_names}"
-                                                    )
-        target_text.grid()
-    display_window.target_var = tk.StringVar(value='target')
-    display_window.feature_vars = tk.StringVar()
-    display_window.target_label = tk.Label(display_window, text="Select Target Column")
-    display_window.target_label.grid()
-    display_window.target_select = customtkinter.CTkOptionMenu(display_window, variable=display_window.target_var, values=list(data.columns))
-    display_window.target_select.grid()
-    display_window.feature_label = tk.Label(display_window, text="Select Feature Columns")
-    display_window.feature_label.grid()
-    display_window.feature_select = tk.Listbox(display_window, selectmode='multiple', listvariable=display_window.feature_vars)
-    for col in data.columns:
-        display_window.feature_select.insert(tk.END, col)
-    display_window.feature_select.grid()
-
-    display_window.data_label = tk.Label(display_window, text=data.head().to_string())
-    display_window.data_label.grid()
-    display_window.submit_data = customtkinter.CTkButton(display_window, text="Submit data", command=lambda: store_selections(display_window.target_var,display_window.feature_select.curselection()))
-    display_window.submit_data.grid()
 
 class App(customtkinter.CTk):
     def __init__(self):
@@ -557,6 +459,104 @@ def on_train_sklearn():
 def framework_selection(frame):
     pass
 
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+def data_from_local(display_window):
+    global data
+    filepath = filedialog.askopenfilename(filetypes=[("CSV Files","*.csv"),("MAT Files","*.mat"),("TXT Files","*.txt")])
+    file_ext = filepath.split(".")[-1]
+    if file_ext == "csv":
+        data = pd.read_csv(filepath)
+        data = pd.DataFrame(data)
+    elif file_ext == "mat":
+        data = scipy.io.loadmat(filepath)
+        data = pd.DataFrame(data)
+    elif file_ext == "txt":
+        data = pd.read_csv(filepath, delimiter = '\t')
+        data = pd.DataFrame(data)
+
+    def store_selections(target_var, feature_vars):
+        global data, target, features, data_selection, feature_names
+
+        target = (data[target_var.get()])  # data.columns[str( )]
+        features = pd.DataFrame()
+        data_selection = 1
+        for i in feature_vars:
+            print({data.columns[i]: (data[data.columns[i]])})
+            features[data.columns[i]] = np.asarray(data[data.columns[
+                i]])  # features.append(features_temp, ignore_index=True) #features[] = data[data.columns[i]]
+        print(features)
+        feature_names = [data.columns[i] for i in feature_vars]
+        target_text = tk.Label(display_window,
+                               text=f"Data is selected. You can return this page to change selected features.\n Selected feature(s): {feature_names}"
+                               )
+        target_text.grid()
+
+    display_window.target_var = tk.StringVar(value='target')
+    display_window.feature_vars = tk.StringVar()
+    display_window.target_label = tk.Label(display_window, text="Select Target Column")
+    display_window.target_label.grid()
+    display_window.target_select = customtkinter.CTkOptionMenu(display_window, variable=display_window.target_var,
+                                                               values=list(data.columns))
+    display_window.target_select.grid()
+    display_window.feature_label = tk.Label(display_window, text="Select Feature Columns")
+    display_window.feature_label.grid()
+    display_window.feature_select = tk.Listbox(display_window, selectmode='multiple',
+                                               listvariable=display_window.feature_vars)
+    for col in data.columns:
+        display_window.feature_select.insert(tk.END, col)
+    display_window.feature_select.grid()
+
+    display_window.data_label = tk.Label(display_window, text=data.head().to_string())
+    display_window.data_label.grid()
+    display_window.submit_data = customtkinter.CTkButton(display_window, text="Submit data",
+                                                         command=lambda: store_selections(display_window.target_var,
+                                                                                          display_window.feature_select.curselection()))
+    display_window.submit_data.grid()
+
+def import_data2():
+    global data,data_selection
+    dataset_name = dataset_var.get()
+    data = getattr(datasets,dataset)()
+
+    #display_data2()
+
+def display_data2(display_window):
+    global data, target, features,dataset_var,data_selection
+    data = pd.DataFrame(data=np.c_[data['data'], data['target']],columns=data['feature_names'] + ['target'])
+    data = data.dropna()
+
+    def store_selections(target_var, feature_vars):
+        global data, target, features,data_selection,feature_names
+
+        target = (data[target_var.get()])#data.columns[str( )]
+        features = pd.DataFrame()
+        data_selection = 1
+        for i in feature_vars:
+            print({data.columns[i]: (data[data.columns[i]])})
+            features[data.columns[i]] = np.asarray(data[data.columns[i]])# features.append(features_temp, ignore_index=True) #features[] = data[data.columns[i]]
+        print(features)
+        feature_names = [data.columns[i] for i in feature_vars]
+        target_text = tk.Label(display_window, text=f"Data is selected. You can return this page to change selected features.\n Selected feature(s): {feature_names}"
+                                                    )
+        target_text.grid()
+    display_window.target_var = tk.StringVar(value='target')
+    display_window.feature_vars = tk.StringVar()
+    display_window.target_label = tk.Label(display_window, text="Select Target Column")
+    display_window.target_label.grid()
+    display_window.target_select = customtkinter.CTkOptionMenu(display_window, variable=display_window.target_var, values=list(data.columns))
+    display_window.target_select.grid()
+    display_window.feature_label = tk.Label(display_window, text="Select Feature Columns")
+    display_window.feature_label.grid()
+    display_window.feature_select = tk.Listbox(display_window, selectmode='multiple', listvariable=display_window.feature_vars)
+    for col in data.columns:
+        display_window.feature_select.insert(tk.END, col)
+    display_window.feature_select.grid()
+
+    display_window.data_label = tk.Label(display_window, text=data.head().to_string())
+    display_window.data_label.grid()
+    display_window.submit_data = customtkinter.CTkButton(display_window, text="Submit data", command=lambda: store_selections(display_window.target_var,display_window.feature_select.curselection()))
+    display_window.submit_data.grid()
 
 
 def donothing():
