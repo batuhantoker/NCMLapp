@@ -5,7 +5,7 @@ import tkinter as tk
 from pyspark.sql import SparkSession
 from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.ml.feature import VectorAssembler
-from pyspark.ml.classification import LogisticRegression
+
 def pySpark_func():
     global data, target, features
     global models_param
