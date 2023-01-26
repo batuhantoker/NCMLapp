@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import requests
 import urllib
+import warnings
 import pandas as pd
 import tkinter as tk
 import tarfile, glob, scipy, time
@@ -140,7 +141,6 @@ def TOBECHECK(nono):
     # Feature and model selection selection
     for i in range(1, feature_set.shape[0]):
         for features in combinations(range(10), i):
-            print(features)
             feature_names = [feature_set[0][k] for k in features]
             feature_idx = features
             cur_X = feature_set_xarray[features, :, :]
