@@ -243,7 +243,7 @@ def slip(height,cycles):
 
 
         ax.plot(gait_xz[:i,0],gait_y[:i],gait_xz[:i,1], linewidth=.5, dashes=[5, 3], c='k')
-        spring_x,spring_z = spring(gait_xz[i], foot_pos_list[i], 5, 0.5)
+        spring_x,spring_z = spring(gait_xz[i], foot_pos_list[i], 3, 0.3)
         spring_y = np.zeros(spring_x.shape)
         ax.plot(foot_pos_list[:i, 0],gait_y[:i],foot_pos_list[:i, 1], linewidth=.5, dashes=[5, 3], c='r')
         ax.plot(spring_x,spring_y,spring_z, c="black")
