@@ -296,15 +296,18 @@ def spring(start, end, nodes, width):
 
     # Convert to numpy array to account for inputs of different types/shapes.
     start, end = np.array(start).reshape((2,)), np.array(end).reshape((2,))
-    # m = (start[1] - end[1]) / (start[0] - end[0])
-    # c = (start[1] - (m * start[0]))
-    # print(m)
-    # if abs(m)<30:
-    #     start = (start[0] + 0.02,+ m * (start[0] + 0.02) + c)
-    # else:
-    #     m=30
-    #     start = start # (start[0] - 0.01,  m * (start[0] - 0.01) + c)
-    #end = (end[0]- 0.01,- m * (end[0] - 0.01)+c)
+    dx = -(end[0] - start[0])
+    dy = -(end[1] - start[1])
+    s_i = start
+    e_i = end
+    x_s = start[0] - dx / 1.3
+    y_s = start[1] - dy / 1.3
+    x_e = end[0] + dx / 1.3
+    y_e = end[1] + dy / 1.3
+
+    end = np.array([x_s,y_s])
+    start = np.array([x_e,y_e])
+
     #end = (end[0] - 0.1, -m * (end[0] -0.1) + c)
     start, end = np.array(start).reshape((2,)), np.array(end).reshape((2,))
     #start =
@@ -335,6 +338,9 @@ def spring(start, end, nodes, width):
             + ((length * (2 * i - 1) * u_t) / (2 * nodes))
             + (normal_dist * (-1)**i * u_n))
 
+    spring_coords = np.insert(spring_coords,0,s_i,1)
+    spring_coords = np.insert(spring_coords,-1,e_i,1)
+    print(spring_coords)
     return spring_coords[0,:], spring_coords[1,:]
 
 def plot_limit_cycles(slip_traj: SlipTrajectory, axs=None, cmap_name='copper', fig_size=(15, 10)):
