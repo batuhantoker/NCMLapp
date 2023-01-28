@@ -5,6 +5,17 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 from matplotlib import animation
+from math import pi as PI
+import numpy as np
+import matplotlib.pyplot as plt
+from argparse import ArgumentParser
+
+from slip_control.slip.slip_trajectory import SlipTrajectory
+from slip_control.slip.slip_model import SlipModel, X, X_DOT, X_DDOT, Z, Z_DOT, Z_DDOT
+from slip_control.controllers.target_to_states_generator import CycleStateGenerator, ForwardSpeedStateGenerator
+from slip_control.controllers.diff_flat_slip_controller import SlipDiffFlatController
+from slip_control.utils import plot_utils
+from slip_control.utils.plot_utils import spring
 
 def run_simulation(height, cycles,theta_max,torso_width,simulation, filename):
     pelvis_length = torso_width/100
@@ -165,6 +176,86 @@ def run_simulation(height, cycles,theta_max,torso_width,simulation, filename):
     else :
         for i in range(pos_pendulum_left.shape[0]):  # range(len(pos_pendulum_left)):
             update(i)
+
+def slip(height,cycles):
+    # Instantiate SLIP model
+    height = height / 100
+    r0 = height * 0.53
+    m = 80  # [kg]
+
+    n_legs = 1
+    k_rel = 10.7
+    slip = SlipModel(mass=m, leg_length=r0, k_rel=k_rel * n_legs)
+
+    g = SlipModel.g
+
+    # Error deviation weights during the stance trajectory
+    traj_weights = np.array([1., 1., 1., 1., 1., 1.])
+    traj_weights /= np.linalg.norm(traj_weights)
+    # Error deviation weights of target take-off states
+    take_off_state_error_weights = np.array([0.0, 1.0, 0., 1.0, 1.0, 0.])
+    take_off_state_error_weights /= np.linalg.norm(take_off_state_error_weights)
+
+    n_cycles = cycles  # Generate a trajectory of 5 cycles
+    max_theta_dot = 4 * PI  # [rad/s] max angular leg velocity during flight
+    # Define a forward velocity
+    forward_speed = 4 * slip.r0  # [m/s]
+    # Define a desired gait duty cycle (time of stance / time of cycle) in [0.2, 1.0]
+    duty_cycle = 0.5
+
+    z_init = slip.r0
+    # Set an initial state (assumed to be a flight phase state)  [x, x', x'', z, z', z'']
+    init_to_state = np.array([0.0, forward_speed, 0.0, z_init, 0.0, -g])
+    # Set a desired take off state defining the forward and vertical velocity desired
+    to_des_state = init_to_state
+
+    # Configure Differentially flat controller
+    slip_controller = SlipDiffFlatController(slip_model=slip,
+                                             traj_weights=traj_weights,
+                                             max_flight_theta_dot=max_theta_dot,
+                                             debug=False)
+    to_state_generator = ForwardSpeedStateGenerator(slip_model=slip, target_state_weights=take_off_state_error_weights,
+                                                    desired_forward_speed=forward_speed,
+                                                    desired_duty_cycle=duty_cycle)
+    slip_controller.target_to_state_generator = to_state_generator
+
+    # Generate SLIP trajectory tree without future cycle planning
+    tree = slip_controller.generate_slip_trajectory_tree(desired_gait_cycles=n_cycles,
+                                                         initial_state=init_to_state,
+                                                         max_samples_per_cycle=30,
+                                                         angle_epsilon=np.deg2rad(.02),
+                                                         look_ahead_cycles=0)
+    slip_traj_no_future = tree.get_optimal_trajectory()
+    plt_axs,foot_pos_list,gait_xz,time=plot_utils.plot_slip_trajectory(slip_traj_no_future, plot_passive=True, plot_td_angles=True,
+                                    title="Without future cycle planning",
+                                    color=(23 / 255., 0 / 255., 194 / 255.))
+    gait_y = np.zeros(gait_xz[:,0].shape)
+    fig2, ax2 = plt.subplots()
+    for index, i in enumerate(foot_pos_list):
+        ax2.plot(*spring(gait_xz[index],foot_pos_list[index],3, 0.5), c="black")
+        ax2.set_aspect("equal", "box")
+
+    def update(frame):
+        i = frame
+        ax.clear()
+        ax.scatter(gait_xz[i, 0],gait_y[i], gait_xz[i, 1], c='b', marker='o')
+        ax.scatter(foot_pos_list[i, 0],gait_y[i], foot_pos_list[i, 1], c='r', marker='o')
+
+
+        ax.plot(gait_xz[:i,0],gait_y[:i],gait_xz[:i,1], linewidth=.5, dashes=[5, 3], c='k')
+        spring_x,spring_z = spring(gait_xz[i], foot_pos_list[i], 5, 0.5)
+        spring_y = np.zeros(spring_x.shape)
+        ax.plot(foot_pos_list[:i, 0],gait_y[:i],foot_pos_list[:i, 1], linewidth=.5, dashes=[5, 3], c='r')
+        ax.plot(spring_x,spring_y,spring_z, c="black")
+        #ax.set_aspect("equal", "box")
+        canvas.draw()
+        canvas.flush_events()
+
+    for i in range(foot_pos_list.shape[0]):  # range(len(pos_pendulum_left)):
+        update(i)
+
+
+
 root = tk.Tk()
 root.title("Gait Simulation")
 root.geometry("900x900")
@@ -173,7 +264,6 @@ cycle_label.grid(row=0,  column=0, sticky='e')
 cycle_entry = tk.Entry(root)
 cycle_entry.grid(row=0,  column=1, sticky='w')
 cycle_entry.insert(0, "4")
-
 
 height_label = tk.Label(root, text="Height (cm):")
 height_label.grid(row=1,  column=0, sticky='e')
@@ -192,7 +282,7 @@ pelvis_entry = tk.Entry(root)
 pelvis_entry.grid(row=3,  column=1, sticky='w')
 pelvis_entry.insert(0, "15")
 
-run_button = tk.Button(root, text="Run Simulation", command=lambda: run_simulation(float(height_entry.get()), int(cycle_entry.get()),int(theta_entry.get()),int(pelvis_entry.get()),0,0))
+run_button = tk.Button(root, text="Run Simulation", command=lambda: slip(float(height_entry.get()),int(cycle_entry.get())) ) #run_simulation(float(height_entry.get()), int(cycle_entry.get()),int(theta_entry.get()),int(pelvis_entry.get()),0,0)
 run_button.grid(row=4, column=1, sticky='w')
 animation_label = tk.Label(root, text="Animation file name")
 animation_label.grid(row=5,  column=0, sticky='e')
@@ -205,7 +295,7 @@ fig_frame = tk.Frame(root)
 fig_frame.grid(row=7,column=0,columnspan=2)
 # Create a placeholder figure
 fig = plt.figure(figsize=(8, 8))
-ax = plt.axes(projection='3d')
+ax = plt.axes(projection='3d') #projection='3d'
 canvas = FigureCanvasTkAgg(fig, master=fig_frame)
 
 canvas.draw()
