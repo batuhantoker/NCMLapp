@@ -8,6 +8,8 @@ from matplotlib import animation
 from math import pi as PI
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import resample
+from scipy import signal
 from argparse import ArgumentParser
 
 from slip_control.slip.slip_trajectory import SlipTrajectory
@@ -226,33 +228,132 @@ def slip(height,cycles):
                                                          angle_epsilon=np.deg2rad(.02),
                                                          look_ahead_cycles=0)
     slip_traj_no_future = tree.get_optimal_trajectory()
-    plt_axs,foot_pos_list,gait_xz,time=plot_utils.plot_slip_trajectory(slip_traj_no_future, plot_passive=True, plot_td_angles=True,
+    plt_axs,foot_pos_list,gait_xz,time,time_label=plot_utils.plot_slip_trajectory(slip_traj_no_future, plot_passive=True, plot_td_angles=True,
                                     title="Without future cycle planning",
                                     color=(23 / 255., 0 / 255., 194 / 255.))
     gait_y = np.zeros(gait_xz[:,0].shape)
-    fig2, ax2 = plt.subplots()
-    for index, i in enumerate(foot_pos_list):
-        ax2.plot(*spring(gait_xz[index],foot_pos_list[index],3, 0.5), c="black")
-        ax2.set_aspect("equal", "box")
 
+    def generate_full_body():
+        pelvis_length = 0.1#int(pelvis_entry.get())
+        i_prev = 0
+        k = 0
+        next_flight = 0
+        next_contact = 0
+        op_needed = True
+        full_body = np.array([0, 0, 0, 0,0,0])
+        full_body_left = np.vstack((full_body,full_body))
+        full_body_right = np.vstack((full_body, full_body))
+        for index, i in enumerate(time_label):
+            if i != i_prev and k==1:
+                next_contact = [x-index for x in np.where(time_label[index:] == 0)][0][0]
+                op_needed = False
+                k=0
+            if i == 0 and op_needed:
+                next_flight = [x for x in np.where(time_label[index:] == 1)][0][0]-1
+                op_needed = False
+                k=1
+            i_prev = i
+        i_prev = 1
+        calculate = 0
+        for index, i in enumerate(time_label[1:]):
+            if i != i_prev:
+                calculate = 1
+            if i == 0 and calculate==1:
+                body = np.array([gait_xz[index:index + next_flight, 0], gait_y[index:index + next_flight],
+                                 gait_xz[index:index + next_flight, 1], foot_pos_list[index:index + next_flight, 0],
+                                 gait_y[index:index + next_flight], foot_pos_list[index:index + next_flight, 1]])
+                range_1, range_2 = index + next_flight , index + next_flight + next_contact
+
+                body_right = np.array([gait_xz[range_1:range_2, 0],
+                                       gait_y[range_1:range_2] + pelvis_length,
+                                       gait_xz[range_1:range_2, 1],
+                                       foot_pos_list[range_1:range_2, 0],
+                                       gait_y[range_1:range_2] + pelvis_length,
+                                       foot_pos_list[range_1:range_2, 1]])
+                ur = next_contact / next_flight
+                body_res=np.empty((int(next_contact),6))
+                for k,a in enumerate(body):
+                    ur=next_contact/next_flight
+                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur + 4) / ur, xp=np.arange(len(a)), fp=a)])
+                    body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
+                full_body_left = np.vstack((full_body_left,body_res))
+                full_body_right = np.vstack((full_body_right, body_right.T))
+                calculate = 0
+            if i == 1 and calculate==1:
+                body = np.array([gait_xz[index:index + next_contact, 0], gait_y[index:index + next_contact],
+                                 gait_xz[index:index + next_contact, 1], foot_pos_list[index:index + next_contact, 0],
+                                 gait_y[index:index + next_contact], foot_pos_list[index:index + next_contact, 1]])
+                range_1 , range_2 = index + next_contact , index + next_flight + next_contact #+ next_contact + next_flight
+                body_right = np.array([gait_xz[range_1:range_2, 0],
+                                       gait_y[range_1:range_2]+pelvis_length,
+                                       gait_xz[range_1:range_2, 1],
+                                       foot_pos_list[range_1:range_2, 0],
+                                       gait_y[range_1:range_2]+pelvis_length,
+                                       foot_pos_list[range_1:range_2, 1]])
+                ur = next_contact / next_flight
+                body_res=np.empty((int(next_contact),6))
+                for k,a in enumerate(body_right):
+                    ur=next_contact/next_flight
+                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur + 4) / ur, xp=np.arange(len(a)), fp=a)])
+                    body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
+                full_body_left = np.vstack((full_body_left, body.T))
+                full_body_right = np.vstack((full_body_right, body_res))
+
+                calculate = 0
+
+            i_prev = i
+
+        return full_body_left, full_body_right
+    # fig2, ax2 = plt.subplots()
+    # for index, i in enumerate(foot_pos_list):
+    #     ax2.plot(*spring(gait_xz[index],foot_pos_list[index],3, 0.5), c="black")
+    #     ax2.set_aspect("equal", "box")
+    full_body_left, full_body_right = generate_full_body()
     def update(frame):
         i = frame
         ax.clear()
         ax.scatter(gait_xz[i, 0],gait_y[i], gait_xz[i, 1], c='b', marker='o')
         ax.scatter(foot_pos_list[i, 0],gait_y[i], foot_pos_list[i, 1], c='r', marker='o')
-
-
         ax.plot(gait_xz[:i,0],gait_y[:i],gait_xz[:i,1], linewidth=.5, dashes=[5, 3], c='k')
-        spring_x,spring_z = spring(gait_xz[i], foot_pos_list[i], 3, 0.3)
+        ax.axes.set_xlim3d(left=gait_xz[i, 0] - 2, right=gait_xz[i, 0] + 2)
+        ax.axes.set_ylim3d(bottom=-.10, top=0.1 + .10)
+        ax.axes.set_zlim3d(bottom=0, top=height + .20)
+        ax.set_title(f'{round(time[i],2)} sec')
+        spring_x,spring_z = spring(gait_xz[i], foot_pos_list[i], 5, 0.3)
         spring_y = np.zeros(spring_x.shape)
         ax.plot(foot_pos_list[:i, 0],gait_y[:i],foot_pos_list[:i, 1], linewidth=.5, dashes=[5, 3], c='r')
         ax.plot(spring_x,spring_y,spring_z, c="black")
         #ax.set_aspect("equal", "box")
         canvas.draw()
         canvas.flush_events()
+    def update2(frame):
+        i = frame
+        ax.clear()
+        ax.scatter(full_body_left[i, 0],full_body_left[i,1], full_body_left[i, 2], c='b', marker='o')
+        ax.scatter(full_body_left[i, 3],full_body_left[i,4], full_body_left[i,5], c='r', marker='o')
+        ax.scatter(full_body_right[i, 0], full_body_right[i, 1], full_body_right[i, 2], c='g', marker='o')
+        ax.scatter(full_body_right[i, 3], full_body_right[i, 4], full_body_right[i, 5], c='k', marker='o')
+        ax.plot(full_body_left[:i, 0],full_body_left[:i,1], full_body_left[:i, 2], linewidth=.5, dashes=[5, 3], c='k')
+        ax.plot(full_body_right[:i, 0], full_body_right[:i, 1], full_body_right[:i, 2], linewidth=.5, dashes=[5, 3], c='k')
+        #
+        # ax.axes.set_ylim3d(bottom=-.10, top=0.1 + .10)
+        # ax.axes.set_zlim3d(bottom=0, top=height + .20)
+        #ax.set_title(f'{round(time[i],2)} sec')
 
-    for i in range(foot_pos_list.shape[0]):  # range(len(pos_pendulum_left)):
-        update(i)
+        ax.axes.set_xlim3d(left=0, right=10)
+        spring_x,spring_z = spring([full_body_left[i, 0], full_body_left[i, 2]], [full_body_left[i, 3], full_body_left[i, 5]], 5, 0.3)
+        spring_y = np.zeros(spring_x.shape)
+        #ax.plot(foot_pos_list[:i, 0],gait_y[:i],foot_pos_list[:i, 1], linewidth=.5, dashes=[5, 3], c='r')
+        #ax.plot(spring_x,spring_y,spring_z, c="black")
+        #ax.set_aspect("equal", "box")
+        canvas.draw()
+        canvas.flush_events()
+
+    for i in range(full_body_left.shape[0]):
+       update2(i)
+    # for i in range(foot_pos_list.shape[0]):  # range(len(pos_pendulum_left)):
+    #     update(i)
+    plt.show()
 
 
 

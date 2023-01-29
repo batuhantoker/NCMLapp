@@ -279,7 +279,7 @@ def plot_slip_trajectory(slip_traj: Union[(SlipTrajectory, SlipGaitCycleCtrl)], 
         i_prev = i
     gait_xz= np.vstack((gait[:,0],gait[:,3])).T
 
-    return plt_axs,foot_pos_list,gait_xz,time
+    return plt_axs,foot_pos_list,gait_xz,time, time_label
 
 def spring(start, end, nodes, width):
     """!
@@ -337,11 +337,10 @@ def spring(start, end, nodes, width):
             start
             + ((length * (2 * i - 1) * u_t) / (2 * nodes))
             + (normal_dist * (-1)**i * u_n))
+    spring_coords_x = np.hstack([s_i[0],spring_coords[0,:],e_i[0]])
+    spring_coords_y = np.hstack([s_i[1], spring_coords[1, :], e_i[1]])
 
-    spring_coords = np.insert(spring_coords,0,s_i,1)
-    spring_coords = np.insert(spring_coords,-1,e_i,1)
-    print(spring_coords)
-    return spring_coords[0,:], spring_coords[1,:]
+    return spring_coords_x, spring_coords_y
 
 def plot_limit_cycles(slip_traj: SlipTrajectory, axs=None, cmap_name='copper', fig_size=(15, 10)):
     LABEL_FONT_SIZE = 12
