@@ -268,9 +268,9 @@ def plot_slip_trajectory(slip_traj: Union[(SlipTrajectory, SlipGaitCycleCtrl)], 
                 contact_duration = next_contact
             k=k+1
             if k<contact_duration/2:
-                y_new = 0.1/contact_duration*k
+                y_new = 0.3/contact_duration*k
             else:
-                y_new = 0.1 - 0.1/contact_duration*(k-1)
+                y_new = 0.3 - 0.3/contact_duration*(k-1)
             foot = np.array([contact[a]+(contact[a+1]-contact[a])/contact_duration*(k-1),y_new])
             contact_prev=next_contact    
              

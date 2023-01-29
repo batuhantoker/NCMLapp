@@ -184,7 +184,7 @@ def slip(height,cycles):
     height = height / 100
     r0 = height * 0.53
     m = 80  # [kg]
-
+    pelvis_length = 0.021  # int(pelvis_entry.get())
     n_legs = 1
     k_rel = 10.7
     slip = SlipModel(mass=m, leg_length=r0, k_rel=k_rel * n_legs)
@@ -234,7 +234,7 @@ def slip(height,cycles):
     gait_y = np.zeros(gait_xz[:,0].shape)
 
     def generate_full_body():
-        pelvis_length = 0.021#int(pelvis_entry.get())
+
         i_prev = 0
         k = 0
         next_flight = 0
@@ -242,7 +242,7 @@ def slip(height,cycles):
         op_needed = True
         full_body = np.array([0, 0, 0, 0,0,0])
         full_body_left = np.vstack((full_body,full_body))
-        full_body_right = np.vstack((full_body, full_body))
+
         for index, i in enumerate(time_label):
             if i != i_prev and k==1:
                 next_contact = [x-index for x in np.where(time_label[index:] == 0)][0][0]
@@ -255,69 +255,124 @@ def slip(height,cycles):
             i_prev = i
         i_prev = 1
         calculate = 0
+        z=0
         for index, i in enumerate(time_label[1:]):
             if i != i_prev:
                 calculate = 1
-                print(i)
+                z=z+1
             if i == 0 and calculate==1:
                 body = np.array([gait_xz[index:index + next_flight, 0], gait_y[index:index + next_flight],
                                  gait_xz[index:index + next_flight, 1], foot_pos_list[index:index + next_flight, 0],
                                  gait_y[index:index + next_flight], foot_pos_list[index:index + next_flight, 1]])
-                if index <next_flight:
-                    range_1, range_2 = index + next_flight , index + next_flight+ next_contact #index , index +next_flight
-                else:
-                    range_1, range_2 = index + next_flight, index + next_flight + next_contact
-
-                body_right = np.array([gait_xz[range_1:range_2, 0],
-                                       gait_y[range_1:range_2] + pelvis_length,
-                                       gait_xz[range_1:range_2, 1],
-                                       foot_pos_list[range_1:range_2, 0],
-                                       gait_y[range_1:range_2] + pelvis_length,
-                                       foot_pos_list[range_1:range_2, 1]])
-                ur = next_contact / next_flight
-                body_res=np.empty((int(next_contact),6))
+                # if index < next_flight:
+                #     range_1, range_2 = index + next_flight , index + next_flight+ next_contact #index , index +next_flight
+                # else:
+                #     range_1, range_2 = index + next_flight , index + next_contact + next_flight
+                # if z< 2:
+                #     body_right = np.array([gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2] + pelvis_length,
+                #                        gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2] + pelvis_length,
+                #                        gait_y[range_1:range_2]])
+                # else :
+                #     body_right = np.array([gait_xz[range_1:range_2, 0],
+                #                            gait_y[range_1:range_2] + pelvis_length,
+                #                            gait_xz[range_1:range_2, 1],
+                #                            foot_pos_list[range_1:range_2, 0],
+                #                            gait_y[range_1:range_2] + pelvis_length,
+                #                            foot_pos_list[range_1:range_2, 1]])
+                # ur = next_contact / next_flight
+                ur = 50
+                body_res=np.empty((int(next_contact)*10,6))
                 for k,a in enumerate(body):
-                    ur=next_contact/next_flight
-                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur + 4) / ur, xp=np.arange(len(a)), fp=a)])
+
+                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur) / ur, xp=np.arange(len(a)), fp=a)])
                     body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
                 full_body_left = np.vstack((full_body_left,body_res))
-                full_body_right = np.vstack((full_body_right, body_right.T))
+                #full_body_right = np.vstack((full_body_right, body_right.T))
                 calculate = 0
+                print(body_reseampled[0].shape)
             if i == 1 and calculate==1:
                 body = np.array([gait_xz[index:index + next_contact, 0], gait_y[index:index + next_contact],
                                  gait_xz[index:index + next_contact, 1], foot_pos_list[index:index + next_contact, 0],
                                  gait_y[index:index + next_contact], foot_pos_list[index:index + next_contact, 1]])
-                # if index < next_contact:
-                #     range_1, range_2 = index -next_flight+ next_contact, index + next_contact  # index , index +next_flight
-                # else:
-                #     range_1, range_2 = index + next_contact, index + next_flight + next_contact
-                range_1, range_2 = index + next_contact, index + next_contact + next_flight
-                body_right = np.array([gait_xz[range_1:range_2, 0],
-                                       gait_y[range_1:range_2]+pelvis_length,
-                                       gait_xz[range_1:range_2, 1],
-                                       foot_pos_list[range_1:range_2, 0],
-                                       gait_y[range_1:range_2]+pelvis_length,
-                                       foot_pos_list[range_1:range_2, 1]])
-                ur = next_contact / next_flight
+
+                range_1, range_2 = index , index  + next_flight #+ next_flight  # index , index +next_flight
+
+                #range_1, range_2 = index + next_contact , index + next_contact + next_flight
+                # body_right = np.array([gait_xz[range_1:range_2, 0],
+                #                        gait_y[range_1:range_2]+pelvis_length,
+                #                        gait_xz[range_1:range_2, 1],
+                #                        foot_pos_list[range_1:range_2, 0],
+                #                        gait_y[range_1:range_2]+pelvis_length,
+                #                        foot_pos_list[range_1:range_2, 1]])
+                # if z< 2:
+                #     body_right = np.array([gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2] + pelvis_length,
+                #                        gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2],
+                #                        gait_y[range_1:range_2] + pelvis_length,
+                #                        gait_y[range_1:range_2]])
+                # ur = next_contact / next_flight
+                ur= 40
                 body_res=np.empty((int(next_contact),6))
-                for k,a in enumerate(body_right):
-                    ur=next_contact/next_flight
-                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur + 4) / ur, xp=np.arange(len(a)), fp=a)])
-                    print(body_reseampled)
-                    #body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
-                full_body_left = np.vstack((full_body_left, body.T))
-                full_body_right = np.vstack((full_body_right, body_right.T))
+                for k,a in enumerate(body):
+                    body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur ) / ur, xp=np.arange(len(a)), fp=a)])
+
+                    body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
+                full_body_left = np.vstack((full_body_left, body_res))
+                # full_body_right = np.vstack((full_body_right, body_res))
 
                 calculate = 0
 
             i_prev = i
+        range_1, range_2 = next_contact-1,next_contact
+        body_right = np.array([gait_xz[range_1:range_2, 0],
+                               gait_y[range_1:range_2]+pelvis_length,
+                               gait_xz[range_1:range_2, 1],
+                               foot_pos_list[range_1:range_2, 0],
+                               gait_y[range_1:range_2]+pelvis_length,
+                               foot_pos_list[range_1:range_2, 1]])
+        full_body_right = np.vstack((body_right.T, body_right.T))
+        for i in range (next_contact):
+            full_body_right = np.vstack((full_body_right, full_body_right[-1]))
+            full_body_left = np.vstack((full_body_left, full_body_left[-1]))
 
-        return full_body_left, full_body_right
+        next_flight = next_contact
+        step_length = np.max(full_body_left[:, 0]) / cycles
+        full_body_right_n = np.array([np.array(full_body_left[:-next_flight, 0])+step_length/2,np.array(full_body_left[:-next_flight,1]) + pelvis_length,np.array(full_body_left[:-next_flight, 2]),np.array(full_body_left[:-next_flight, 3])+step_length/2,np.array(full_body_left[:-next_flight,4]) + pelvis_length,full_body_left[:-next_flight, 5]]).T
+        full_body_right = np.vstack((full_body_right[:next_flight], full_body_right_n[:-next_flight]))
+        print(full_body_left.shape,full_body_right.shape)
+        return full_body_left, full_body_right,next_contact
+    def draw_body(body_left,body_right):
+        body_dim = height * 0.4
+        x = [body_left[0], body_right[0], body_left[0], body_right[0]]
+        y = [body_left[1], body_right[1], body_left[1], body_right[1]]
+        z = [body_left[2], body_right[2], body_left[2]+body_dim, body_right[2]+body_dim]
+        verts = [list(zip(x, y, z))]
+        ax.add_collection3d(Poly3DCollection(verts,linewidth=20,edgecolor="k",facecolor = "red",rasterized=False))
+        r = 0.01
+        u, v = np.mgrid[0:2 * np.pi:30j, 0:np.pi:30j]
+        x = (body_left[0]+ body_right[0])/2+(np.cos(u) * np.sin(v))*0.4
+        y = (body_left[1]+ body_right[1])/2+((np.sin(u) * np.sin(v))*0.06)
+        z = body_left[2]+body_dim+.28 + np.cos(v) *0.2
+        ax.plot_surface(x, y, z,color='r')
+
+    def draw_line(pos1, pos2):
+        for i in range(3):
+            xs = [pos1[0], pos2[0]]
+            ys = [pos1[1], pos2[1]]
+            zs = [pos1[2], pos2[2]]
+            # Plot contour curves
+            line1, = ax.plot(xs, ys, zs,'k', linewidth=5)
+        return line1
     # fig2, ax2 = plt.subplots()
     # for index, i in enumerate(foot_pos_list):
     #     ax2.plot(*spring(gait_xz[index],foot_pos_list[index],3, 0.5), c="black")
     #     ax2.set_aspect("equal", "box")
-    full_body_left, full_body_right = generate_full_body()
+    full_body_left, full_body_right , next_contact = generate_full_body()
+
     def update(frame):
         i = frame
         ax.clear()
@@ -335,7 +390,7 @@ def slip(height,cycles):
         #ax.set_aspect("equal", "box")
         canvas.draw()
         canvas.flush_events()
-    def update2(frame):
+    def update2(frame,pelvis_length):
         i = frame
         ax.clear()
         ax.scatter(full_body_left[i, 0],full_body_left[i,1], full_body_left[i, 2], c='b', marker='o')
@@ -345,24 +400,30 @@ def slip(height,cycles):
         ax.plot(full_body_left[:i, 0],full_body_left[:i,1], full_body_left[:i, 2], linewidth=.5, dashes=[5, 3], c='k')
         ax.plot(full_body_right[:i, 0], full_body_right[:i, 1], full_body_right[:i, 2], linewidth=.5, dashes=[5, 3], c='k')
         #
-        # ax.axes.set_ylim3d(bottom=-.10, top=0.1 + .10)
-        # ax.axes.set_zlim3d(bottom=0, top=height + .20)
+        ax.axes.set_xlim3d(left=full_body_left[i, 0] - 1, right=full_body_left[i, 0] + 1)
+        ax.axes.set_zlim3d(bottom=0, top=height + .20)
         #ax.set_title(f'{round(time[i],2)} sec')
+        draw_body(full_body_left[i,0:3], full_body_right[i,0:3])
+        # draw_line(body_left[i,:], body_right[i,:])
+        # draw_line(body_right[i,:], pos_pendulum_right[i,:])
+        # draw_body(body_left[i,:], body_right[i,:])
 
-        ax.axes.set_xlim3d(left=0, right=10)
+        ax.set_box_aspect((60, 40, 50))
+        ax.set_xlabel('(m)', fontsize=10)
+        ax.set_ylabel('(m)', fontsize=10)
         spring_x,spring_z = spring([full_body_left[i, 0], full_body_left[i, 2]], [full_body_left[i, 3], full_body_left[i, 5]], 5, 0.3)
         spring_y = np.zeros(spring_x.shape)
         ax.plot(spring_x,spring_y,spring_z, c="black",linewidth= 5)
         spring_x, spring_z = spring([full_body_right[i, 0], full_body_right[i, 2]],
                                     [full_body_right[i, 3], full_body_right[i, 5]], 5, 0.3)
-        spring_y = np.zeros(spring_x.shape)+full_body_right[20, 1]
+        spring_y = np.zeros(spring_x.shape)+pelvis_length# full_body_right[20, 1]
         ax.plot(spring_x, spring_y, spring_z, c="black",linewidth= 5)
         #ax.set_aspect("equal", "box")
         canvas.draw()
         canvas.flush_events()
 
-    for i in range(full_body_left.shape[0]):
-       update2(i)
+    for i in range(next_contact+2,full_body_right.shape[0]):
+       update2(i,pelvis_length)
     # for i in range(foot_pos_list.shape[0]):  # range(len(pos_pendulum_left)):
     #     update(i)
     plt.show()
