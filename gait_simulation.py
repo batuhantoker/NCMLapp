@@ -234,7 +234,7 @@ def slip(height,cycles):
     gait_y = np.zeros(gait_xz[:,0].shape)
 
     def generate_full_body():
-        pelvis_length = 0.1#int(pelvis_entry.get())
+        pelvis_length = 0.021#int(pelvis_entry.get())
         i_prev = 0
         k = 0
         next_flight = 0
@@ -258,11 +258,15 @@ def slip(height,cycles):
         for index, i in enumerate(time_label[1:]):
             if i != i_prev:
                 calculate = 1
+                print(i)
             if i == 0 and calculate==1:
                 body = np.array([gait_xz[index:index + next_flight, 0], gait_y[index:index + next_flight],
                                  gait_xz[index:index + next_flight, 1], foot_pos_list[index:index + next_flight, 0],
                                  gait_y[index:index + next_flight], foot_pos_list[index:index + next_flight, 1]])
-                range_1, range_2 = index + next_flight , index + next_flight + next_contact
+                if index <next_flight:
+                    range_1, range_2 = index + next_flight , index + next_flight+ next_contact #index , index +next_flight
+                else:
+                    range_1, range_2 = index + next_flight, index + next_flight + next_contact
 
                 body_right = np.array([gait_xz[range_1:range_2, 0],
                                        gait_y[range_1:range_2] + pelvis_length,
@@ -283,7 +287,11 @@ def slip(height,cycles):
                 body = np.array([gait_xz[index:index + next_contact, 0], gait_y[index:index + next_contact],
                                  gait_xz[index:index + next_contact, 1], foot_pos_list[index:index + next_contact, 0],
                                  gait_y[index:index + next_contact], foot_pos_list[index:index + next_contact, 1]])
-                range_1 , range_2 = index + next_contact , index + next_flight + next_contact #+ next_contact + next_flight
+                # if index < next_contact:
+                #     range_1, range_2 = index -next_flight+ next_contact, index + next_contact  # index , index +next_flight
+                # else:
+                #     range_1, range_2 = index + next_contact, index + next_flight + next_contact
+                range_1, range_2 = index + next_contact, index + next_contact + next_flight
                 body_right = np.array([gait_xz[range_1:range_2, 0],
                                        gait_y[range_1:range_2]+pelvis_length,
                                        gait_xz[range_1:range_2, 1],
@@ -295,9 +303,10 @@ def slip(height,cycles):
                 for k,a in enumerate(body_right):
                     ur=next_contact/next_flight
                     body_reseampled = np.array([np.interp(np.arange((len(a) - 1) * ur + 4) / ur, xp=np.arange(len(a)), fp=a)])
-                    body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
+                    print(body_reseampled)
+                    #body_res[:,k]=body_reseampled[0]#np.append(body_res,body_reseampled, axis=1)
                 full_body_left = np.vstack((full_body_left, body.T))
-                full_body_right = np.vstack((full_body_right, body_res))
+                full_body_right = np.vstack((full_body_right, body_right.T))
 
                 calculate = 0
 
@@ -343,8 +352,11 @@ def slip(height,cycles):
         ax.axes.set_xlim3d(left=0, right=10)
         spring_x,spring_z = spring([full_body_left[i, 0], full_body_left[i, 2]], [full_body_left[i, 3], full_body_left[i, 5]], 5, 0.3)
         spring_y = np.zeros(spring_x.shape)
-        #ax.plot(foot_pos_list[:i, 0],gait_y[:i],foot_pos_list[:i, 1], linewidth=.5, dashes=[5, 3], c='r')
-        #ax.plot(spring_x,spring_y,spring_z, c="black")
+        ax.plot(spring_x,spring_y,spring_z, c="black",linewidth= 5)
+        spring_x, spring_z = spring([full_body_right[i, 0], full_body_right[i, 2]],
+                                    [full_body_right[i, 3], full_body_right[i, 5]], 5, 0.3)
+        spring_y = np.zeros(spring_x.shape)+full_body_right[20, 1]
+        ax.plot(spring_x, spring_y, spring_z, c="black",linewidth= 5)
         #ax.set_aspect("equal", "box")
         canvas.draw()
         canvas.flush_events()
@@ -401,6 +413,7 @@ canvas = FigureCanvasTkAgg(fig, master=fig_frame)
 
 canvas.draw()
 canvas.get_tk_widget().grid(row=0,  column=1)
+slip(float(height_entry.get()),int(cycle_entry.get()))
 # # Create a placeholder figure
 # fig2 = plt.figure()
 # ax2=plt.axes()
