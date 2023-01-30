@@ -1,4 +1,4 @@
-# NCMLapp
+# NCMLapp - under development
 No Code Machine Learning app built with tkinter to use huge variety of machine learning algorithm without coding
 
 A tkinter app to do all.
